@@ -1,6 +1,7 @@
 #! /usr/bin/lua
 -- 20101229 initial shape with license and all
 -- 20110105 next version, functionized and nicer names
+-- 20110111 writing directly to file instead of creating long string
 --
 -- ldap2prosody: getting data from Active Directory and write to 
 -- prosody config files, for auto groupchat bookmarks and automatic 
@@ -54,8 +55,8 @@ local conf = 'conference.xxxx.de'
 -- Prosody config files 
 rosterfile = '/etc/prosody/groups.cfg.txt'
 chatfile = '/etc/prosody/groupchats.cfg.txt'
--- local rosterfile = 'groups.cfg.txt'
--- local chatfile = 'groupchats.cfg.txt'
+--local rosterfile = 'groups.cfg.txt'
+--local chatfile = 'groupchats.cfg.txt'
 
 -- END CONFIG PART --
 
@@ -72,14 +73,14 @@ function makebase (group)
 end
 
 function getusers(base, is_chat, group, outfile)
-	local content = ''
+	io.output(outfile)
 	local count = 1
 	while base[count] do
 		-- write groupheader for prosody (appended to a string)
 		if is_chat then 
-			content = content .. '[' .. chatgroup[count] .. '@' .. conf .. ']\n'
+			io.write ('[' .. string.gsub(chatgroup[count], '^.*-', '') .. '@' .. conf .. ']\n')
 		else 
-			content = content .. '[' .. rostergroup[count] .. ']\n'
+			io.write ('[' .. rostergroup[count] .. ']\n')
 		end
 		for dn, attribs in ld:search { base = base[count], scope = 'subtree', attrs = 'member'} do
 			if attribs then 
@@ -90,14 +91,11 @@ function getusers(base, is_chat, group, outfile)
 							-- iterating through groupmembers we want following values
 							local user = userattribs['sAMAccountName']
 							local displayname = userattribs['displayName']
-							content = content .. user .. '@' .. jabberdomain .. '=' .. displayname .. '\n'
+							io.write (user .. '@' .. jabberdomain .. '=' .. displayname .. '\n')
 		end end end end end 
-		content = content .. '\n'
+		io.write('\n')
 		count = count + 1 
 	end
-	-- string finally gets written to the file
-	io.output(outfile)
-	io.write (content)	
 	io.output():close()
 end
 
